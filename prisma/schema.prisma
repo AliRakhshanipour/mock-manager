@@ -1,0 +1,157 @@
+// ========= DataSource & Generator =========
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+//
+// ========= ENUMS =========
+//
+
+enum ArchitectureType {
+  MONOLITH
+  MICROSERVICE
+}
+
+enum ServiceMode {
+  PROXY
+  CACHE
+  MOCK
+  ADMIN
+}
+
+enum AuthMethod {
+  JWT
+  COOKIE
+  NONE
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  OPTIONS
+  HEAD
+}
+
+enum ContentType {
+  JSON
+  TEXT
+  HTML
+  XML
+  OTHER
+}
+
+//
+// ========= MODELS =========
+//
+
+model Project {
+  id               String           @id @default(cuid())
+  name             String           @db.VarChar(100)
+  description      String?
+  architectureType ArchitectureType @default(MONOLITH)
+  services         Service[]
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Service {
+  id          String       @id @default(cuid())
+  name        String       @db.VarChar(100)
+  baseUrl     String       @db.Text
+  mode        ServiceMode  @default(PROXY)
+
+  authMethod  AuthMethod   @default(NONE)
+  authToken   String?      @db.Text
+  cookieName  String?      @db.VarChar(100)
+
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  endpoints   Endpoint[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([baseUrl])
+}
+
+model Endpoint {
+  id               String      @id @default(cuid())
+  method           HttpMethod
+  path             String      @db.Text              // e.g. /api/user/:id
+  serviceId        String
+  service          Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  manualResponseId String?     @unique
+  manualResponse   Response?   @relation("ManualResponseForEndpoint", fields: [manualResponseId], references: [id], onDelete: SetNull)
+
+  requests         Request[]
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  deletedAt        DateTime?   // optional soft delete
+
+  @@index([serviceId])
+  @@unique([serviceId, method, path])
+}
+
+model Request {
+  id              String     @id @default(cuid())
+
+  endpointId      String
+  endpoint        Endpoint   @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  hash            String     @unique               // Computed hash of method + headers + query + body
+
+  headers         Json
+  query           Json
+  body            Json?
+
+  matchingProfile Json?                              // Configuration like ignored headers/keys
+  responses       Response[]                         // Historical responses
+  responseCount   Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?                          // Optional soft delete
+
+  @@index([endpointId])
+  @@index([hash])
+}
+
+model Response {
+  id                 String       @id @default(cuid())
+  statusCode         Int
+  contentType        ContentType  @default(JSON)
+  headers            Json
+  body               Json
+
+  isFromCache        Boolean      @default(false)
+  isManual           Boolean      @default(false)
+  matchedScore       Float?       // smart match score (0.0 - 1.0)
+
+  requestId          String?
+  request            Request?     @relation(fields: [requestId], references: [id])
+
+  manualForEndpoint  Endpoint?    @relation("ManualResponseForEndpoint")
+
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?    // Optional soft delete
+
+  @@index([requestId])
+  @@index([isFromCache])
+  @@index([isManual])
+}
