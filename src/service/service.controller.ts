@@ -7,16 +7,10 @@ import {
     Post,
     Put,
   } from '@nestjs/common';
-  import {
-    ApiTags,
-    ApiOperation,
-    ApiResponse,
-    ApiNotFoundResponse,
-    ApiParam,
-  } from '@nestjs/swagger';
+  import { ServiceService } from './service.service';
   import { CreateServiceDto } from './dto/create-service.dto';
   import { UpdateServiceDto } from './dto/update-service.dto';
-  import { ServiceService } from './service.service';
+  import { ApiTags, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
   
   @ApiTags('Services')
   @Controller('services')
@@ -24,8 +18,7 @@ import {
     constructor(private readonly service: ServiceService) {}
   
     @Post()
-    @ApiOperation({ summary: 'Register a new service' })
-    @ApiResponse({ status: 201, description: 'Service created' })
+    @ApiOperation({ summary: 'Create new service' })
     create(@Body() dto: CreateServiceDto) {
       return this.service.create(dto);
     }
@@ -37,20 +30,20 @@ import {
     }
   
     @Get(':id')
-    @ApiOperation({ summary: 'Get service by ID' })
-    @ApiNotFoundResponse({ description: 'Service not found' })
+    @ApiOperation({ summary: 'Get a service by ID' })
+    @ApiParam({ name: 'id' })
     findOne(@Param('id') id: string) {
       return this.service.findOne(id);
     }
   
     @Put(':id')
-    @ApiOperation({ summary: 'Update service by ID' })
+    @ApiOperation({ summary: 'Update a service' })
     update(@Param('id') id: string, @Body() dto: UpdateServiceDto) {
       return this.service.update(id, dto);
     }
   
     @Delete(':id')
-    @ApiOperation({ summary: 'Delete service by ID' })
+    @ApiOperation({ summary: 'Delete a service' })
     remove(@Param('id') id: string) {
       return this.service.remove(id);
     }

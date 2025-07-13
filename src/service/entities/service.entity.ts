@@ -17,10 +17,10 @@ export class ServiceEntity {
   @ApiProperty({ enum: AuthMethod })
   authMethod: AuthMethod;
 
-  @ApiProperty({ required: false })
+  @ApiProperty()
   authToken?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty()
   cookieName?: string;
 
   @ApiProperty()
